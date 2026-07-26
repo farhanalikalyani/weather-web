@@ -1,0 +1,20 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Anyone can read posted updates/materials; only the admin account can write.
+    match /materials/{docId} {
+      allow read: if true;
+      allow write: if request.auth != null
+                   && request.auth.token.email == "imrannazeert@gmail.com";
+    }
+
+    // Anyone can join the waitlist (write-only, one doc at a time);
+    // only the admin can read the list of emails.
+    match /waitlist/{docId} {
+      allow create: if true;
+      allow read, update, delete: if request.auth != null
+                   && request.auth.token.email == "imrannazeert@gmail.com";
+    }
+  }
+}
