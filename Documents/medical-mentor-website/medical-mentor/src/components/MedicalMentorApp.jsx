@@ -915,50 +915,58 @@ export default function MedicalMentorApp({ studentName = "there", onAdmin }) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white flex flex-col max-w-md mx-auto relative">
-      {/* Top bar */}
-      <header className="flex items-center justify-between px-4 pt-4 pb-2 flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-500 to-teal-600 flex items-center justify-center">
-            <Stethoscope size={14} className="text-white" />
+    <div className="min-h-screen bg-slate-950 flex justify-center lg:items-center relative overflow-hidden">
+      {/* Ambient desktop backdrop so the app reads as an intentional frame, not a stray thin column */}
+      <div className="hidden lg:block absolute inset-0 pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-600/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl" />
+      </div>
+
+      <div className="w-full max-w-md lg:max-w-lg lg:my-10 lg:rounded-[2rem] lg:border lg:border-slate-800 lg:shadow-2xl lg:shadow-black/60 bg-slate-950 text-white flex flex-col relative lg:h-[calc(100vh-5rem)] lg:overflow-hidden z-10">
+        {/* Top bar */}
+        <header className="flex items-center justify-between px-4 pt-4 pb-2 flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-500 to-teal-600 flex items-center justify-center">
+              <Stethoscope size={14} className="text-white" />
+            </div>
+            <span className="text-sm font-bold text-white">Medical Mentor</span>
           </div>
-          <span className="text-sm font-bold text-white">Medical Mentor</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 bg-slate-800/60 rounded-full px-2.5 py-1 border border-slate-700/40">
-            <Activity size={11} className="text-cyan-400" />
-            <span className="text-xs text-slate-400">
-              {Math.round(questionLog.filter(q=>q.correct).length / Math.max(1, questionLog.length) * 100)}% accuracy
-            </span>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 bg-slate-800/60 rounded-full px-2.5 py-1 border border-slate-700/40">
+              <Activity size={11} className="text-cyan-400" />
+              <span className="text-xs text-slate-400">
+                {Math.round(questionLog.filter(q=>q.correct).length / Math.max(1, questionLog.length) * 100)}% accuracy
+              </span>
+            </div>
+            {onAdmin && (
+              <button onClick={onAdmin} className="text-slate-600 hover:text-slate-400 transition-colors" title="Admin">
+                <ShieldCheck size={16} />
+              </button>
+            )}
           </div>
-          {onAdmin && (
-            <button onClick={onAdmin} className="text-slate-600 hover:text-slate-400 transition-colors" title="Admin">
-              <ShieldCheck size={16} />
+        </header>
+
+        {/* Main content */}
+        <main className="flex-1 overflow-y-auto px-4 pt-2 pb-4">
+          {screenMap[screen] || screenMap.home}
+        </main>
+
+        {/* Bottom nav — sticky within the app frame, not the whole viewport */}
+        <nav className="flex-shrink-0 bg-slate-900/95 backdrop-blur border-t border-slate-800/80 flex">
+          {NAV_ITEMS.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => setScreen(id)}
+              className={`flex-1 flex flex-col items-center py-2.5 gap-0.5 transition-colors ${
+                screen === id ? "text-cyan-400" : "text-slate-500 hover:text-slate-300"
+              }`}
+            >
+              <Icon size={19} strokeWidth={screen === id ? 2.5 : 1.8} />
+              <span className="text-[10px] font-medium leading-tight">{label}</span>
             </button>
-          )}
-        </div>
-      </header>
-
-      {/* Main content */}
-      <main className="flex-1 overflow-y-auto px-4 pt-2 pb-20">
-        {screenMap[screen] || screenMap.home}
-      </main>
-
-      {/* Bottom nav */}
-      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-slate-900/95 backdrop-blur border-t border-slate-800/80 flex z-50">
-        {NAV_ITEMS.map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            onClick={() => setScreen(id)}
-            className={`flex-1 flex flex-col items-center py-2.5 gap-0.5 transition-colors ${
-              screen === id ? "text-cyan-400" : "text-slate-500 hover:text-slate-300"
-            }`}
-          >
-            <Icon size={19} strokeWidth={screen === id ? 2.5 : 1.8} />
-            <span className="text-[10px] font-medium leading-tight">{label}</span>
-          </button>
-        ))}
-      </nav>
+          ))}
+        </nav>
+      </div>
     </div>
   );
 }

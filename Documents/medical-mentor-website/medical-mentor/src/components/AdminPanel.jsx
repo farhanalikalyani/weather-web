@@ -1,33 +1,61 @@
 import { useEffect, useState } from "react";
 import {
-  ShieldCheck, LogOut, ArrowLeft, Plus, Trash2, Megaphone, Users, AlertTriangle,
+  ShieldCheck, LogOut, ArrowLeft, Plus, Trash2, Megaphone, Users, AlertTriangle, CheckCircle,
 } from "lucide-react";
 import { auth, db, firebaseReady, ADMIN_EMAIL } from "../firebase";
 import {
   onAuthStateChanged, signInWithEmailAndPassword, signOut,
+  createUserWithEmailAndPassword, sendPasswordResetEmail,
 } from "firebase/auth";
 import {
   collection, addDoc, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp,
 } from "firebase/firestore";
 
 function LoginForm() {
+  const [mode, setMode] = useState("signin"); // signin | signup | reset
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const notAdmin = () => "Only the approved admin account can access this panel.";
 
   const submit = async (e) => {
     e.preventDefault();
     setError("");
+    setInfo("");
+    const trimmedEmail = email.trim();
+
+    if (trimmedEmail !== ADMIN_EMAIL) {
+      setError(notAdmin());
+      return;
+    }
+
     setLoading(true);
     try {
-      const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
-      if (cred.user.email !== ADMIN_EMAIL) {
-        await signOut(auth);
-        setError("This account isn't authorized as admin.");
+      if (mode === "signin") {
+        const cred = await signInWithEmailAndPassword(auth, trimmedEmail, password);
+        if (cred.user.email !== ADMIN_EMAIL) {
+          await signOut(auth);
+          setError(notAdmin());
+        }
+      } else if (mode === "signup") {
+        const cred = await createUserWithEmailAndPassword(auth, trimmedEmail, password);
+        if (cred.user.email !== ADMIN_EMAIL) {
+          await signOut(auth);
+          setError(notAdmin());
+        }
+      } else if (mode === "reset") {
+        await sendPasswordResetEmail(auth, trimmedEmail);
+        setInfo("Password reset email sent — check the inbox for " + trimmedEmail);
       }
     } catch (err) {
-      setError("Login failed — check the email and password.");
+      if (err.code === "auth/email-already-in-use") setError("An account already exists for this email — try signing in instead.");
+      else if (err.code === "auth/weak-password") setError("Password should be at least 6 characters.");
+      else if (err.code === "auth/invalid-credential" || err.code === "auth/wrong-password") setError("Incorrect email or password.");
+      else if (err.code === "auth/user-not-found") setError("No account exists yet for this email — use \"Create admin account\" first.");
+      else setError("Something went wrong — try again.");
     } finally {
       setLoading(false);
     }
@@ -38,7 +66,7 @@ function LoginForm() {
       <div className="w-full max-w-sm">
         <div className="flex items-center gap-2 mb-6">
           <ShieldCheck size={20} className="text-cyan-400" />
-          <h1 className="text-lg font-bold">Admin sign in</h1>
+          <h1 className="text-lg font-bold">Admin {mode === "signup" ? "sign up" : mode === "reset" ? "reset password" : "sign in"}</h1>
         </div>
 
         {!firebaseReady && (
@@ -49,6 +77,11 @@ function LoginForm() {
           </div>
         )}
 
+        <p className="text-xs text-slate-500 mb-4">
+          Access is restricted to a single approved account. Everyone else — including anyone
+          who tries to sign up here — will be rejected automatically.
+        </p>
+
         <form onSubmit={submit} className="space-y-3">
           <input
             type="email"
@@ -58,23 +91,47 @@ function LoginForm() {
             onChange={(e) => setEmail(e.target.value)}
             className="w-full bg-slate-900/80 border border-slate-700/60 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/60"
           />
-          <input
-            type="password"
-            required
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full bg-slate-900/80 border border-slate-700/60 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/60"
-          />
+          {mode !== "reset" && (
+            <input
+              type="password"
+              required
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full bg-slate-900/80 border border-slate-700/60 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/60"
+            />
+          )}
           {error && <p className="text-xs text-red-400">{error}</p>}
+          {info && (
+            <p className="text-xs text-green-400 flex items-center gap-1.5">
+              <CheckCircle size={13} /> {info}
+            </p>
+          )}
           <button
             type="submit"
             disabled={loading}
             className="w-full bg-cyan-600 hover:bg-cyan-500 disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition-colors"
           >
-            {loading ? "Signing in…" : "Sign in"}
+            {loading ? "Working…" : mode === "signup" ? "Create admin account" : mode === "reset" ? "Send reset email" : "Sign in"}
           </button>
         </form>
+
+        <div className="flex items-center justify-between mt-4 text-xs">
+          {mode === "signin" ? (
+            <>
+              <button onClick={() => { setMode("reset"); setError(""); setInfo(""); }} className="text-slate-500 hover:text-slate-300 transition-colors">
+                Forgot password?
+              </button>
+              <button onClick={() => { setMode("signup"); setError(""); setInfo(""); }} className="text-cyan-400 hover:text-cyan-300 transition-colors">
+                First time? Create admin account
+              </button>
+            </>
+          ) : (
+            <button onClick={() => { setMode("signin"); setError(""); setInfo(""); }} className="text-slate-500 hover:text-slate-300 transition-colors">
+              ← Back to sign in
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
